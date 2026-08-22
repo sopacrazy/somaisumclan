@@ -1,0 +1,723 @@
+@font-face {
+  font-family: 'Clash';
+  src: url('/fonts/Clash-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clash';
+  src: url('/fonts/Clash-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #faf8f4;
+  color: #171a21;
+  overflow-x: hidden;
+}
+
+.section-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.page { padding: 2.5rem 1.5rem 4rem; }
+
+/* NAV */
+.topnav {
+  background: linear-gradient(180deg, #23262f 0%, #171a21 100%);
+  border-bottom: 3px solid #c8962a;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.topnav-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px 1.5rem;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand {
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 1px;
+  color: #f5c842;
+  text-shadow: 0 2px 0 #151515, 0 0 10px rgba(245, 200, 66, 0.25);
+}
+
+.brand-sub {
+  font-size: 12px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 600;
+}
+
+/* BANNER */
+.banner {
+  position: relative;
+  width: 100%;
+  height: clamp(150px, 22vw, 280px);
+  background: #171a21 url('/banner.png') center 42% / cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 8, 20, 0.35) 0%, rgba(10, 8, 20, 0.65) 100%);
+}
+
+.banner-overlay {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 22px);
+  padding: 0 1.5rem;
+}
+
+.banner-badge,
+.banner-badge-fallback {
+  width: clamp(52px, 7vw, 92px);
+  height: clamp(52px, 7vw, 92px);
+  object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+  flex-shrink: 0;
+}
+
+.banner-badge-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(36px, 5vw, 60px);
+}
+
+.banner-title {
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: clamp(34px, 7vw, 68px);
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 4px 26px rgba(0, 0, 0, 0.65);
+}
+
+/* STATUS */
+.status-block {
+  padding: 2.5rem 0;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(23, 26, 33, 0.5);
+}
+
+.status-error { color: #a83a3a; }
+
+.btn {
+  display: inline-block;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-ghost {
+  background: rgba(23, 26, 33, 0.05);
+  border: 1px solid rgba(23, 26, 33, 0.15);
+  color: #171a21;
+}
+
+.btn-ghost:hover { background: rgba(23, 26, 33, 0.09); }
+
+/* PROFILE */
+.profile {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid rgba(23, 26, 33, 0.08);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 8px 28px rgba(23, 26, 33, 0.06);
+}
+
+.profile-badge { width: 108px; height: 108px; object-fit: contain; flex-shrink: 0; }
+.profile-badge-fallback { font-size: 68px; }
+
+.profile-name {
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.profile-tag { font-size: 13px; color: rgba(23, 26, 33, 0.45); margin-top: 2px; }
+
+.profile-pills {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(200, 150, 42, 0.1);
+  color: #a5741c;
+  border: 1px solid rgba(200, 150, 42, 0.25);
+}
+
+.profile-desc {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(23, 26, 33, 0.65);
+  max-width: 640px;
+}
+
+.label-row {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.label-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #171a21;
+  background: rgba(23, 26, 33, 0.05);
+  border-radius: 20px;
+  padding: 4px 10px 4px 4px;
+}
+
+.label-chip img { width: 20px; height: 20px; }
+
+/* STAT GRID */
+.stat-grid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.stat-tile {
+  min-height: 106px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #f7f4ea 0%, #dedace 100%);
+  border: 3px solid #8d867a;
+  border-radius: 10px;
+  padding: 16px 14px;
+  text-align: center;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.86), inset 0 -3px 0 rgba(93, 86, 76, 0.16), 0 5px 0 rgba(69, 61, 52, 0.16);
+}
+
+.stat-value {
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 3px 0 #151515, 1px 0 0 #151515, -1px 0 0 #151515, 0 -1px 0 #151515;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6a6258;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+/* TWO COLUMN PANELS */
+.two-col {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 720px) {
+  .two-col { grid-template-columns: 1fr; }
+}
+
+.panel {
+  margin-top: 22px;
+  background: #fff;
+  border: 1px solid rgba(23, 26, 33, 0.08);
+  border-radius: 16px;
+  padding: 22px 24px;
+}
+
+.two-col .panel {
+  margin-top: 0;
+  min-height: 394px;
+  background: linear-gradient(180deg, #f3f1e7 0%, #e2dfd4 100%);
+  border: 3px solid #7d766c;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.72), 0 8px 0 rgba(74, 66, 57, 0.13);
+}
+
+.panel-title {
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #fff;
+  text-shadow: 0 3px 0 #151515, 1px 0 0 #151515, -1px 0 0 #151515, 0 -1px 0 #151515;
+}
+
+.panel-rows { display: flex; flex-direction: column; gap: 8px; }
+
+.panel-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  min-height: 42px;
+  font-size: 14px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(114, 107, 97, 0.16);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.panel-row:last-child { border-bottom: 1px solid rgba(114, 107, 97, 0.16); padding-bottom: 8px; }
+.panel-row span { color: #716a61; font-weight: 700; }
+.panel-row strong {
+  color: #111;
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* WAR BAR */
+.war-bar {
+  display: flex;
+  height: 18px;
+  border: 2px solid #777064;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #bfb8aa;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.38), 0 2px 0 rgba(68, 60, 51, 0.15);
+}
+
+.war-bar-win { background: linear-gradient(180deg, #52c95f, #2d9639); }
+.war-bar-tie { background: linear-gradient(180deg, #c7c1b1, #a9a291); }
+.war-bar-loss { background: linear-gradient(180deg, #d75c5c, #ae3f3f); }
+
+.war-legend {
+  margin-top: 12px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: #655e55;
+  font-weight: 800;
+}
+
+.war-legend span { display: flex; align-items: center; gap: 5px; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot-win { background: #3fa64a; }
+.dot-tie { background: #b3ac9c; }
+.dot-loss { background: #c14b4b; }
+
+/* CAPITAL DISTRICTS */
+.district-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.district-chip {
+  min-height: 62px;
+  background: linear-gradient(180deg, #f7f6ef, #d9d6cb);
+  border: 2px solid rgba(116, 111, 101, 0.34);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.82);
+}
+
+.district-name { font-size: 12px; font-weight: 800; color: #47423c; }
+.district-lv { font-size: 12px; color: #b07212; font-weight: 900; margin-top: 4px; }
+
+/* MEMBERS */
+.member-panel {
+  background: #e7e5dc;
+  border: 3px solid #7d766c;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.72), 0 10px 28px rgba(23, 26, 33, 0.13);
+}
+
+.member-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.member-panel-head .panel-title { margin-bottom: 0; }
+
+.member-sort-badge {
+  color: #3f3b36;
+  background: linear-gradient(180deg, #f5f4ed, #c9c7bd);
+  border: 2px solid rgba(89, 83, 75, 0.35);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.75);
+}
+
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.member-card {
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 70px 126px minmax(210px, 1fr) 260px 150px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #f4f4ec 0%, #d8d8ce 100%);
+  border: 2px solid rgba(116, 111, 101, 0.34);
+  border-radius: 8px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.85), inset 0 -2px 0 rgba(92, 87, 79, 0.12);
+}
+
+.member-card:hover {
+  background: linear-gradient(180deg, #eef8d1 0%, #a9cf69 100%);
+  border-color: rgba(110, 151, 54, 0.52);
+}
+
+.member-rank {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #78ca31, #338e24);
+  border: 2px solid #286e1d;
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  text-shadow: 0 2px 0 #174d14, 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+.member-icons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.member-league {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.28));
+}
+
+.member-league-empty { opacity: 0; }
+
+.townhall-badge {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+}
+
+.townhall-badge img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.28));
+}
+
+.townhall-badge strong {
+  position: absolute;
+  right: -3px;
+  bottom: -2px;
+  min-width: 22px;
+  text-align: center;
+  color: #fff;
+  background: rgba(23, 26, 33, 0.74);
+  border-radius: 7px;
+  padding: 1px 4px;
+  font-size: 12px;
+  text-shadow: 0 1px 0 #000;
+}
+
+.member-main {
+  min-width: 0;
+  border-left: 1px solid rgba(87, 83, 76, 0.22);
+  padding-left: 18px;
+}
+
+.member-name-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.member-name-line strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-size: 25px;
+  line-height: 1.05;
+  text-shadow: 0 2px 0 #242424, 1px 0 0 #242424, -1px 0 0 #242424, 0 -1px 0 #242424;
+}
+
+.member-main > span {
+  display: block;
+  margin-top: 5px;
+  color: #5f5a51;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.member-donations {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.member-donations span {
+  display: grid;
+  gap: 4px;
+  color: #6b665e;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.member-donations strong {
+  color: #34312d;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.member-trophies {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, rgba(150, 151, 142, 0.9), rgba(109, 111, 103, 0.86));
+  border-radius: 12px;
+  color: #fff;
+}
+
+.member-trophies strong {
+  font-family: 'Clash', 'Segoe UI', sans-serif;
+  font-size: 28px;
+  line-height: 1;
+  text-shadow: 0 2px 0 #111, 1px 0 0 #111, -1px 0 0 #111, 0 -1px 0 #111;
+}
+
+.member-trophies span { font-size: 30px; }
+
+.member-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.member-pagination span {
+  min-width: 112px;
+  text-align: center;
+  color: #5d574f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.page-btn {
+  width: 42px;
+  height: 38px;
+  border: 2px solid #635d55;
+  border-radius: 8px;
+  color: #fff;
+  background: linear-gradient(180deg, #5fc7f0, #1f8bb8);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 3px 0 #3a332c;
+  font-size: 26px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.page-btn:disabled {
+  cursor: default;
+  opacity: 0.42;
+  filter: grayscale(0.8);
+}
+
+@media (max-width: 960px) {
+  .member-card {
+    grid-template-columns: 54px 104px minmax(170px, 1fr) 132px;
+  }
+
+  .member-icons {
+    gap: 8px;
+  }
+
+  .member-league,
+  .townhall-badge,
+  .townhall-badge img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .member-donations {
+    grid-column: 3 / 5;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .member-panel-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .member-card {
+    grid-template-columns: 46px 88px minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .member-rank {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .member-icons {
+    gap: 6px;
+  }
+
+  .member-league,
+  .townhall-badge,
+  .townhall-badge img {
+    width: 38px;
+    height: 38px;
+  }
+
+  .townhall-badge strong {
+    font-size: 10px;
+    min-width: 18px;
+  }
+
+  .member-main {
+    padding-left: 10px;
+  }
+
+  .member-name-line strong {
+    font-size: 18px;
+  }
+
+  .member-donations,
+  .member-trophies {
+    grid-column: 1 / -1;
+  }
+}
+
+.delta { font-size: 11px; font-weight: 700; }
+.delta-up { color: #3fa64a; }
+.delta-down { color: #c14b4b; }
+.delta-flat { color: rgba(23, 26, 33, 0.3); }
+
+/* FOOTER */
+.site-footer {
+  background: #171a21;
+  padding: 22px 0;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.site-footer code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.site-footer a { color: #f5c842; }
+
+@media (max-width: 640px) {
+  .profile { flex-direction: column; align-items: center; text-align: center; }
+  .profile-pills { justify-content: center; }
+
+  .topnav-inner { flex-wrap: wrap; padding: 12px 1rem; gap: 6px 12px; }
+  .brand { font-size: 18px; }
+
+  .banner-overlay { gap: 12px; padding: 0 1rem; }
+  .banner-badge, .banner-badge-fallback { width: clamp(44px, 14vw, 92px); height: clamp(44px, 14vw, 92px); }
+  .banner-title { font-size: clamp(26px, 11vw, 68px); letter-spacing: 1px; }
+
+  .page { padding: 1.75rem 1rem 3rem; }
+
+  .profile { padding: 18px; gap: 14px; }
+  .profile-badge { width: 84px; height: 84px; }
+  .profile-name { font-size: 24px; }
+
+  .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat-tile { min-height: 88px; padding: 12px 8px; }
+  .stat-value { font-size: 19px; }
+  .stat-label { font-size: 11px; }
+
+  .panel { padding: 16px; }
+  .panel-title { font-size: 21px; }
+  .member-sort-badge { font-size: 12px; padding: 6px 10px; }
+
+  .district-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 400px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .member-card { grid-template-columns: 40px 80px minmax(0, 1fr); }
+  .member-league, .townhall-badge, .townhall-badge img { width: 34px; height: 34px; }
+}
