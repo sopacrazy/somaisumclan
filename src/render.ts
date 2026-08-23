@@ -82,7 +82,7 @@ function leagueIcon(m: ClanMember): string {
   const iconSrc = leagueIconSrc(m);
   const leagueName = m.league?.name ?? 'Sem liga';
 
-  if (!iconSrc) return '<span class="member-league member-league-empty" aria-hidden="true"></span>';
+  if (!iconSrc) return '';
 
   return `
     <img class="member-league" src="${iconSrc}" alt="${leagueName}" title="${leagueName}"
