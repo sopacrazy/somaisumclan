@@ -75,7 +75,7 @@ function leagueIconSrc(m: ClanMember): string | undefined {
   if (!leagueName || leagueName.toLowerCase() === 'unranked') return undefined;
 
   const localIcon = LEAGUE_ICON_BY_NAME[leagueName.toLowerCase()];
-  return localIcon ? `/league-icons/${localIcon}` : m.league?.iconUrls?.small;
+  return localIcon ? `${import.meta.env.BASE_URL}league-icons/${localIcon}` : m.league?.iconUrls?.small;
 }
 
 function leagueIcon(m: ClanMember): string {
