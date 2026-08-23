@@ -28,6 +28,48 @@ export interface ClanMember {
   league?: LeagueRef;
 }
 
+export interface WarAttack {
+  attackerTag: string;
+  defenderTag: string;
+  stars: number;
+  destructionPercentage: number;
+  order: number;
+}
+
+export interface WarMember {
+  tag: string;
+  name: string;
+  mapPosition: number;
+  townhallLevel: number;
+  attacks?: WarAttack[];
+  opponentAttacks: number;
+  bestOpponentAttack?: WarAttack;
+}
+
+export interface WarClanSummary {
+  tag: string;
+  name: string;
+  badgeUrls: { small: string; medium: string; large: string };
+  clanLevel: number;
+  attacks: number;
+  stars: number;
+  destructionPercentage: number;
+  members: WarMember[];
+}
+
+export type WarState = 'notInWar' | 'preparation' | 'inWar' | 'warEnded';
+
+export interface CurrentWar {
+  state: WarState;
+  teamSize?: number;
+  attacksPerMember?: number;
+  preparationStartTime?: string;
+  startTime?: string;
+  endTime?: string;
+  clan?: WarClanSummary;
+  opponent?: WarClanSummary;
+}
+
 export interface ClanInfo {
   tag: string;
   name: string;

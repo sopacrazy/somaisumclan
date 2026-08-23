@@ -1,5 +1,4 @@
-import { CDN } from './data';
-import type { ClanInfo, ClanMember } from './types';
+import type { ClanInfo, ClanMember, CurrentWar, WarAttack, WarClanSummary, WarMember } from './types';
 
 export function renderClanLoading(): void {
   const el = document.getElementById('clanRoot');
@@ -13,6 +12,21 @@ export function renderClanError(message: string): void {
   el.innerHTML = `
     <div class="status-block status-error">⚠️ ${message}</div>
     <button class="btn btn-ghost" id="retryBtn" style="margin-top:14px">Tentar novamente</button>
+  `;
+}
+
+export function renderWarLoading(): void {
+  const el = document.getElementById('warRoot');
+  if (!el) return;
+  el.innerHTML = `<div class="status-block">Carregando guerra atual…</div>`;
+}
+
+export function renderWarError(message: string): void {
+  const el = document.getElementById('warRoot');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="status-block status-error">⚠️ ${message}</div>
+    <button class="btn btn-ghost" id="warRetryBtn" style="margin-top:14px">Tentar novamente</button>
   `;
 }
 
@@ -39,54 +53,81 @@ const WAR_FREQ_LABEL: Record<string, string> = {
   unknown: 'Não informado',
 };
 
-const MEMBERS_PER_PAGE = 6;
-
-const LEAGUE_ICON_BY_NAME: Record<string, string> = {
-  'bronze league iii': 'Icon_HV_League_Bronze_1.png',
-  'bronze league ii': 'Icon_HV_League_Bronze_1.png',
-  'bronze league i': 'Icon_HV_League_Bronze_2.png',
-  'silver league iii': 'Icon_HV_League_Silver_1.png',
-  'silver league ii': 'Icon_HV_League_Silver_1.png',
-  'silver league i': 'Icon_HV_League_Silver_2.png',
-  'gold league iii': 'Icon_HV_League_Gold_1.png',
-  'gold league ii': 'Icon_HV_League_Gold_1.png',
-  'gold league i': 'Icon_HV_League_Gold_2.png',
-  'crystal league iii': 'Icon_HV_League_Crystal_1.png',
-  'crystal league ii': 'Icon_HV_League_Crystal_1.png',
-  'crystal league i': 'Icon_HV_League_Crystal_2.png',
-  'master league iii': 'Icon_HV_League_Master_1.png',
-  'master league ii': 'Icon_HV_League_Master_1.png',
-  'master league i': 'Icon_HV_League_Master_2.png',
-  'champion league iii': 'Icon_HV_League_Champion.png',
-  'champion league ii': 'Icon_HV_League_Champion.png',
-  'champion league i': 'Icon_HV_League_Champion.png',
-  'titan league iii': 'Icon_HV_League_Titan_1.png',
-  'titan league ii': 'Icon_HV_League_Titan_1.png',
-  'titan league i': 'Icon_HV_League_Titan_2.png',
-  'legend league': 'Icon_HV_League_Legend_1.png',
+const WAR_STATE_LABEL: Record<string, string> = {
+  notInWar: 'Sem guerra no momento',
+  preparation: 'Em preparação',
+  inWar: 'Guerra em andamento',
+  warEnded: 'Guerra encerrada',
 };
+
+const MEMBERS_PER_PAGE = 6;
 
 function roleLabel(role: string): string {
   return ROLE_LABEL[role] ?? role;
 }
 
-function leagueIconSrc(m: ClanMember): string | undefined {
-  const leagueName = m.league?.name?.trim();
-  if (!leagueName || leagueName.toLowerCase() === 'unranked') return undefined;
-
-  const localIcon = LEAGUE_ICON_BY_NAME[leagueName.toLowerCase()];
-  return localIcon ? `${import.meta.env.BASE_URL}league-icons/${localIcon}` : m.league?.iconUrls?.small;
+function parseCocDate(value?: string): Date | undefined {
+  if (!value) return undefined;
+  const iso = value.replace(
+    /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})\.000Z$/,
+    '$1-$2-$3T$4:$5:$6.000Z'
+  );
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-function leagueIcon(m: ClanMember): string {
-  const iconSrc = leagueIconSrc(m);
-  const leagueName = m.league?.name ?? 'Sem liga';
+function formatTimeRemaining(target?: Date): string {
+  if (!target) return '—';
+  const diffMs = target.getTime() - Date.now();
+  if (diffMs <= 0) return 'a qualquer momento';
+  const totalMinutes = Math.round(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes}min`;
+  return `${hours}h ${minutes}min`;
+}
 
-  if (!iconSrc) return '';
+function formatDateTime(date?: Date): string {
+  if (!date) return '—';
+  return date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function bestAttack(m: WarMember): WarAttack | undefined {
+  if (!m.attacks?.length) return undefined;
+  return [...m.attacks].sort((a, b) => b.stars - a.stars || b.destructionPercentage - a.destructionPercentage)[0];
+}
+
+function starDisplay(stars: number): string {
+  return '⭐'.repeat(Math.max(0, stars)) + '☆'.repeat(Math.max(0, 3 - stars));
+}
+
+function warMapRow(m: WarMember, attacksPerMember: number): string {
+  const attack = bestAttack(m);
+  const attacksUsed = m.attacks?.length ?? 0;
+  const result = attack
+    ? `<span class="war-row-stars">${starDisplay(attack.stars)}</span><span class="war-row-pct">${attack.destructionPercentage}%</span>`
+    : `<span class="war-row-pending">Sem ataque ainda</span>`;
 
   return `
-    <img class="member-league" src="${iconSrc}" alt="${leagueName}" title="${leagueName}"
-         onerror="this.style.display='none'">
+    <div class="war-row">
+      <div class="war-row-pos">${m.mapPosition}</div>
+      <div class="war-row-main">
+        <strong>${m.name}</strong>
+        <span>CV ${m.townhallLevel} · ${attacksUsed}/${attacksPerMember} ataques</span>
+      </div>
+      <div class="war-row-result">${result}</div>
+    </div>
+  `;
+}
+
+function warClanHead(c: WarClanSummary, side: 'us' | 'them'): string {
+  return `
+    <div class="war-side war-side-${side}">
+      <img class="war-side-badge" src="${c.badgeUrls.medium}" alt="${c.name}"
+           onerror="this.style.display='none'">
+      <div class="war-side-name">${c.name}</div>
+      <div class="war-side-level">Nível ${c.clanLevel}</div>
+    </div>
   `;
 }
 
@@ -97,14 +138,6 @@ function memberCard(m: ClanMember, i: number): string {
     <article class="member-card" data-member-page="${page}">
       <div class="member-rank">
         <span>${i + 1}</span>
-      </div>
-      <div class="member-icons">
-        ${leagueIcon(m)}
-        <span class="townhall-badge">
-          <img src="${CDN}/townhalls/townhall${m.townHallLevel}/icon.webp" alt="CV ${m.townHallLevel}"
-               onerror="this.style.display='none'">
-          <strong>${m.townHallLevel}</strong>
-        </span>
       </div>
       <div class="member-main">
         <div class="member-name-line">
@@ -292,4 +325,88 @@ export function renderClan(clan: ClanInfo): void {
     });
   });
   renderPage(0);
+}
+
+export function renderWar(war: CurrentWar): void {
+  const el = document.getElementById('warRoot');
+  if (!el) return;
+
+  if (war.state === 'notInWar' || !war.clan || !war.opponent) {
+    el.innerHTML = `
+      <div class="panel war-empty">
+        <div class="war-empty-icon">⚔️</div>
+        <p>O clã não está em guerra no momento.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const { clan, opponent } = war;
+  const attacksPerMember = war.attacksPerMember ?? 2;
+  const totalAttacks = (war.teamSize ?? clan.members.length) * attacksPerMember;
+  const clanPct = clan.attacks + opponent.attacks ? Math.round((clan.stars / Math.max(1, clan.stars + opponent.stars)) * 100) : 50;
+
+  const prep = parseCocDate(war.preparationStartTime);
+  const start = parseCocDate(war.startTime);
+  const end = parseCocDate(war.endTime);
+
+  const timeInfo =
+    war.state === 'preparation'
+      ? `<div class="panel-row"><span>Guerra começa</span><strong>${formatDateTime(start)} · em ${formatTimeRemaining(start)}</strong></div>`
+      : war.state === 'inWar'
+        ? `<div class="panel-row"><span>Guerra termina</span><strong>${formatDateTime(end)} · em ${formatTimeRemaining(end)}</strong></div>`
+        : `<div class="panel-row"><span>Terminou em</span><strong>${formatDateTime(end)}</strong></div>`;
+
+  const clanMembers = [...clan.members].sort((a, b) => a.mapPosition - b.mapPosition);
+  const opponentMembers = [...opponent.members].sort((a, b) => a.mapPosition - b.mapPosition);
+
+  el.innerHTML = `
+    <div class="panel war-head">
+      <div class="war-vs-row">
+        ${warClanHead(clan, 'us')}
+        <div class="war-vs-divider">VS</div>
+        ${warClanHead(opponent, 'them')}
+      </div>
+      <div class="war-state-pill">${WAR_STATE_LABEL[war.state] ?? war.state}</div>
+      <div class="panel-rows" style="margin-top:16px">
+        <div class="panel-row"><span>Tamanho da guerra</span><strong>${war.teamSize ?? clan.members.length} vs ${war.teamSize ?? opponent.members.length}</strong></div>
+        <div class="panel-row"><span>Ataques por membro</span><strong>${attacksPerMember}</strong></div>
+        ${prep && war.state === 'preparation' ? `<div class="panel-row"><span>Preparação iniciou</span><strong>${formatDateTime(prep)}</strong></div>` : ''}
+        ${timeInfo}
+      </div>
+    </div>
+
+    <div class="panel war-score">
+      <div class="war-score-bar">
+        <div class="war-score-bar-us" style="width:${clanPct}%"></div>
+        <div class="war-score-bar-them" style="width:${100 - clanPct}%"></div>
+      </div>
+      <div class="war-score-grid">
+        <div class="war-score-tile">
+          <div class="war-score-value">⭐ ${clan.stars}</div>
+          <div class="war-score-sub">${clan.destructionPercentage.toFixed(1)}% destruição</div>
+          <div class="war-score-sub">${clan.attacks}/${totalAttacks} ataques</div>
+        </div>
+        <div class="war-score-tile war-score-tile-them">
+          <div class="war-score-value">⭐ ${opponent.stars}</div>
+          <div class="war-score-sub">${opponent.destructionPercentage.toFixed(1)}% destruição</div>
+          <div class="war-score-sub">${opponent.attacks}/${totalAttacks} ataques</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel war-map-panel">
+      <h2 class="panel-title">🗺️ Mapa de guerra</h2>
+      <div class="war-map">
+        <div class="war-map-col">
+          <div class="war-map-col-head">${clan.name}</div>
+          ${clanMembers.map((m) => warMapRow(m, attacksPerMember)).join('')}
+        </div>
+        <div class="war-map-col">
+          <div class="war-map-col-head">${opponent.name}</div>
+          ${opponentMembers.map((m) => warMapRow(m, attacksPerMember)).join('')}
+        </div>
+      </div>
+    </div>
+  `;
 }
