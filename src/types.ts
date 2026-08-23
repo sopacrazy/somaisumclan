@@ -70,6 +70,46 @@ export interface CurrentWar {
   opponent?: WarClanSummary;
 }
 
+export interface TroopEntry {
+  name: string;
+  emoji: string;
+  quantity: number;
+  imagePath?: string; // TODO: substituir emoji por imagem real
+}
+
+export interface ArmyPreset {
+  name: string;
+  troops: TroopEntry[];
+  spells: TroopEntry[];
+  description: string;
+}
+
+export interface PlayerHero {
+  name: string;
+  level: number;
+  maxLevel: number;
+  village: string;
+}
+
+export interface Player {
+  tag: string;
+  name: string;
+  townHallLevel: number;
+  expLevel: number;
+  trophies: number;
+  bestTrophies: number;
+  warStars: number;
+  attackWins: number;
+  defenseWins: number;
+  donations: number;
+  donationsReceived: number;
+  clanCapitalContributions: number;
+  role: string;
+  league?: LeagueRef;
+  clan?: { tag: string; name: string; clanLevel: number; badgeUrls: { small: string; medium: string; large: string } };
+  heroes: PlayerHero[];
+}
+
 export interface ClanInfo {
   tag: string;
   name: string;

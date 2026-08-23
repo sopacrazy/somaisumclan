@@ -1,4 +1,11 @@
-import type { ClanInfo, ClanMember, CurrentWar, WarAttack, WarClanSummary, WarMember } from './types';
+import type { ClanInfo, ClanMember, CurrentWar, Player, PlayerHero, WarAttack, WarClanSummary, WarMember } from './types';
+import { armyPresetFor } from './data/armyPresets';
+import { buildStrategyPrompt, fetchAIStrategy, suggestTarget, StrategyApiError } from './warStrategy';
+
+// Oculto por enquanto: a IA só recebe dados textuais (CV, posição, placar),
+// sem imagem da base, então a sugestão ainda é genérica por CV, não análise
+// da base real. Trocar para true reativa o botão "Ver Estratégia" no mapa.
+const SHOW_STRATEGY_BUTTON = false;
 
 export function renderClanLoading(): void {
   const el = document.getElementById('clanRoot');
@@ -28,6 +35,32 @@ export function renderWarError(message: string): void {
     <div class="status-block status-error">⚠️ ${message}</div>
     <button class="btn btn-ghost" id="warRetryBtn" style="margin-top:14px">Tentar novamente</button>
   `;
+}
+
+const PLAYER_BACK_BTN = `<button class="btn btn-ghost player-back-btn" type="button" id="playerBackBtn">← Voltar</button>`;
+
+export function renderPlayerLoading(): void {
+  const el = document.getElementById('playerRoot');
+  if (!el) return;
+  el.innerHTML = `${PLAYER_BACK_BTN}<div class="status-block">Carregando jogador…</div>`;
+  wirePlayerBackButton();
+}
+
+export function renderPlayerError(message: string): void {
+  const el = document.getElementById('playerRoot');
+  if (!el) return;
+  el.innerHTML = `
+    ${PLAYER_BACK_BTN}
+    <div class="status-block status-error">⚠️ ${message}</div>
+    <button class="btn btn-ghost" id="playerRetryBtn" style="margin-top:14px">Tentar novamente</button>
+  `;
+  wirePlayerBackButton();
+}
+
+function wirePlayerBackButton(): void {
+  document.getElementById('playerBackBtn')?.addEventListener('click', () => {
+    window.location.hash = '';
+  });
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -101,7 +134,7 @@ function starDisplay(stars: number): string {
   return '⭐'.repeat(Math.max(0, stars)) + '☆'.repeat(Math.max(0, 3 - stars));
 }
 
-function warMapRow(m: WarMember, attacksPerMember: number): string {
+function warMapRow(m: WarMember, attacksPerMember: number, showStrategyBtn: boolean): string {
   const attack = bestAttack(m);
   const attacksUsed = m.attacks?.length ?? 0;
   const result = attack
@@ -109,13 +142,14 @@ function warMapRow(m: WarMember, attacksPerMember: number): string {
     : `<span class="war-row-pending">Sem ataque ainda</span>`;
 
   return `
-    <div class="war-row">
+    <div class="war-row" data-player-tag="${m.tag}">
       <div class="war-row-pos">${m.mapPosition}</div>
       <div class="war-row-main">
         <strong>${m.name}</strong>
         <span>CV ${m.townhallLevel} · ${attacksUsed}/${attacksPerMember} ataques</span>
       </div>
       <div class="war-row-result">${result}</div>
+      ${showStrategyBtn ? `<button class="war-strategy-btn" type="button" data-strategy-tag="${m.tag}">⚔️ Ver Estratégia</button>` : ''}
     </div>
   `;
 }
@@ -135,7 +169,7 @@ function memberCard(m: ClanMember, i: number): string {
   const page = Math.floor(i / MEMBERS_PER_PAGE);
 
   return `
-    <article class="member-card" data-member-page="${page}">
+    <article class="member-card" data-member-page="${page}" data-player-tag="${m.tag}">
       <div class="member-rank">
         <span>${i + 1}</span>
       </div>
@@ -325,11 +359,21 @@ export function renderClan(clan: ClanInfo): void {
     });
   });
   renderPage(0);
+
+  el.querySelectorAll<HTMLElement>('[data-player-tag]').forEach((card) => {
+    card.addEventListener('click', () => {
+      window.location.hash = `#/player/${encodeURIComponent(card.dataset.playerTag!)}`;
+    });
+  });
 }
+
+let currentWar: CurrentWar | null = null;
 
 export function renderWar(war: CurrentWar): void {
   const el = document.getElementById('warRoot');
   if (!el) return;
+
+  currentWar = war;
 
   if (war.state === 'notInWar' || !war.clan || !war.opponent) {
     el.innerHTML = `
@@ -359,6 +403,7 @@ export function renderWar(war: CurrentWar): void {
 
   const clanMembers = [...clan.members].sort((a, b) => a.mapPosition - b.mapPosition);
   const opponentMembers = [...opponent.members].sort((a, b) => a.mapPosition - b.mapPosition);
+  const canAttack = SHOW_STRATEGY_BUTTON && (war.state === 'preparation' || war.state === 'inWar');
 
   el.innerHTML = `
     <div class="panel war-head">
@@ -400,13 +445,265 @@ export function renderWar(war: CurrentWar): void {
       <div class="war-map">
         <div class="war-map-col">
           <div class="war-map-col-head">${clan.name}</div>
-          ${clanMembers.map((m) => warMapRow(m, attacksPerMember)).join('')}
+          ${clanMembers.map((m) => warMapRow(m, attacksPerMember, canAttack)).join('')}
         </div>
         <div class="war-map-col">
           <div class="war-map-col-head">${opponent.name}</div>
-          ${opponentMembers.map((m) => warMapRow(m, attacksPerMember)).join('')}
+          ${opponentMembers.map((m) => warMapRow(m, attacksPerMember, false)).join('')}
         </div>
       </div>
     </div>
   `;
+
+  el.querySelectorAll<HTMLButtonElement>('[data-strategy-tag]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openStrategyModal(btn.dataset.strategyTag!);
+    });
+  });
+
+  el.querySelectorAll<HTMLElement>('.war-row[data-player-tag]').forEach((row) => {
+    row.addEventListener('click', () => {
+      window.location.hash = `#/player/${encodeURIComponent(row.dataset.playerTag!)}`;
+    });
+  });
+}
+
+function getModalRoot(): HTMLElement {
+  let root = document.getElementById('modalRoot');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'modalRoot';
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+function troopChip(t: { name: string; emoji: string; quantity: number; imagePath?: string }): string {
+  // TODO: substituir emoji por imagem real quando t.imagePath estiver disponível
+  const icon = t.imagePath
+    ? `<img src="${t.imagePath}" alt="${t.name}" onerror="this.replaceWith(document.createTextNode('${t.emoji}'))">`
+    : t.emoji;
+  return `
+    <div class="troop-chip" title="${t.name}">
+      <span class="troop-chip-icon">${icon}</span>
+      <span class="troop-chip-qty">x${t.quantity}</span>
+    </div>
+  `;
+}
+
+function formatAIResponse(text: string): string {
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const lines = withBold.split('\n');
+  let html = '';
+  let inList = false;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (/^[-*]\s+/.test(line)) {
+      if (!inList) {
+        html += '<ul>';
+        inList = true;
+      }
+      html += `<li>${line.replace(/^[-*]\s+/, '')}</li>`;
+    } else {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      if (line) html += `<p>${line}</p>`;
+    }
+  }
+  if (inList) html += '</ul>';
+  return html || '<p>Sem resposta.</p>';
+}
+
+function closeStrategyModal(): void {
+  const root = document.getElementById('modalRoot');
+  if (root) root.innerHTML = '';
+  document.removeEventListener('keydown', modalKeydownHandler);
+}
+
+function modalKeydownHandler(e: KeyboardEvent): void {
+  if (e.key === 'Escape') closeStrategyModal();
+}
+
+const aiResponseCache = new Map<string, string>();
+
+function cacheKey(attacker: WarMember, target: WarMember): string {
+  return `${attacker.tag}:${target.tag}`;
+}
+
+function renderAIResult(text: string): string {
+  return `
+    <div class="ai-result">${formatAIResponse(text)}</div>
+    <button class="btn btn-ghost" id="aiRegenerateBtn" type="button">🔄 Regenerar</button>
+  `;
+}
+
+async function runAIStrategy(attacker: WarMember, target: WarMember, war: CurrentWar, force = false): Promise<void> {
+  const panel = document.getElementById('aiStrategyPanel');
+  if (!panel) return;
+
+  const key = cacheKey(attacker, target);
+  if (!force && aiResponseCache.has(key)) {
+    panel.innerHTML = renderAIResult(aiResponseCache.get(key)!);
+    document.getElementById('aiRegenerateBtn')?.addEventListener('click', () => runAIStrategy(attacker, target, war, true));
+    return;
+  }
+
+  panel.innerHTML = `<div class="ai-loading"><span class="ai-spinner"></span> 🤖 Analisando guerra…</div>`;
+
+  try {
+    const prompt = buildStrategyPrompt(attacker, target, war);
+    const text = await fetchAIStrategy(prompt);
+    aiResponseCache.set(key, text);
+    panel.innerHTML = renderAIResult(text);
+    document.getElementById('aiRegenerateBtn')?.addEventListener('click', () => runAIStrategy(attacker, target, war, true));
+  } catch (err) {
+    const message = err instanceof StrategyApiError ? err.message : 'Não foi possível gerar a estratégia.';
+    panel.innerHTML = `
+      <div class="status-block status-error">⚠️ ${message}</div>
+      <button class="btn btn-ghost" id="aiRegenerateBtn" type="button">Tentar novamente</button>
+    `;
+    document.getElementById('aiRegenerateBtn')?.addEventListener('click', () => runAIStrategy(attacker, target, war, true));
+  }
+}
+
+function openStrategyModal(attackerTag: string): void {
+  if (!currentWar?.clan || !currentWar.opponent) return;
+  const attacker = currentWar.clan.members.find((m) => m.tag === attackerTag);
+  if (!attacker) return;
+
+  const target = suggestTarget(attacker.mapPosition, currentWar.opponent.members);
+  if (!target) return;
+
+  const preset = armyPresetFor(attacker.townhallLevel);
+
+  const root = getModalRoot();
+  root.innerHTML = `
+    <div class="modal-backdrop" id="strategyBackdrop">
+      <div class="modal" role="dialog" aria-modal="true">
+        <button class="modal-close" type="button" id="strategyCloseBtn" aria-label="Fechar">✕</button>
+
+        <div class="strategy-vs">
+          <div class="strategy-side">
+            <div class="strategy-avatar">🏰<span>${attacker.townhallLevel}</span></div>
+            <strong>${attacker.name}</strong>
+            <span>CV ${attacker.townhallLevel} · Posição ${attacker.mapPosition}</span>
+          </div>
+          <div class="strategy-arrow">→</div>
+          <div class="strategy-side">
+            <div class="strategy-avatar strategy-avatar-target">🏯<span>${target.townhallLevel}</span></div>
+            <strong>${target.name}</strong>
+            <span>CV ${target.townhallLevel} · Posição ${target.mapPosition}</span>
+          </div>
+        </div>
+
+        <div class="strategy-target-info">
+          Alvo sugerido: mesma posição no mapa${target.mapPosition !== attacker.mapPosition ? ' (ajustado, alvo original já com 3⭐)' : ''} ·
+          ${target.opponentAttacks} ataque(s) recebido(s) · melhor resultado: ${starDisplay(target.bestOpponentAttack?.stars ?? 0)}
+        </div>
+
+        ${
+          preset
+            ? `
+        <div class="strategy-section">
+          <h3 class="strategy-section-title">⚔️ Exército recomendado — ${preset.name}</h3>
+          <p class="strategy-section-desc">${preset.description}</p>
+          <div class="troop-grid">${preset.troops.map(troopChip).join('')}</div>
+          <div class="troop-grid troop-grid-spells">${preset.spells.map(troopChip).join('')}</div>
+        </div>
+        `
+            : ''
+        }
+
+        <div class="strategy-section strategy-ai-section">
+          <h3 class="strategy-section-title">🤖 Estratégia gerada por IA</h3>
+          <div id="aiStrategyPanel">
+            ${
+              aiResponseCache.has(cacheKey(attacker, target))
+                ? renderAIResult(aiResponseCache.get(cacheKey(attacker, target))!)
+                : `<button class="btn btn-primary" id="aiGenerateBtn" type="button">🤖 Gerar Estratégia com IA</button>`
+            }
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-ghost" id="strategyFooterCloseBtn" type="button">Fechar</button>
+          <span class="modal-disclaimer">Sugestão gerada por IA · Adapte conforme seu estilo</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const war = currentWar;
+  document.getElementById('aiGenerateBtn')?.addEventListener('click', () => runAIStrategy(attacker, target, war));
+  document.getElementById('aiRegenerateBtn')?.addEventListener('click', () => runAIStrategy(attacker, target, war, true));
+  document.getElementById('strategyCloseBtn')?.addEventListener('click', closeStrategyModal);
+  document.getElementById('strategyFooterCloseBtn')?.addEventListener('click', closeStrategyModal);
+  document.getElementById('strategyBackdrop')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeStrategyModal();
+  });
+  document.addEventListener('keydown', modalKeydownHandler);
+}
+
+function heroBar(h: PlayerHero): string {
+  const pct = Math.round((h.level / h.maxLevel) * 100);
+  return `
+    <div class="hero-row">
+      <div class="hero-row-name">${h.name}</div>
+      <div class="hero-row-bar"><div class="hero-row-fill" style="width:${pct}%"></div></div>
+      <div class="hero-row-level">${h.level}/${h.maxLevel}</div>
+    </div>
+  `;
+}
+
+export function renderPlayer(player: Player): void {
+  const el = document.getElementById('playerRoot');
+  if (!el) return;
+
+  el.innerHTML = `
+    ${PLAYER_BACK_BTN}
+
+    <div class="profile">
+      ${
+        player.clan
+          ? `<img class="profile-badge" src="${player.clan.badgeUrls.large}" alt="${player.clan.name}"
+               onerror="this.outerHTML='<span class=\\'profile-badge-fallback\\'>🛡️</span>'">`
+          : `<span class="profile-badge-fallback">🙂</span>`
+      }
+      <div class="profile-main">
+        <h1 class="profile-name">${player.name}</h1>
+        <div class="profile-tag">${player.tag} · CV ${player.townHallLevel} · Nv. ${player.expLevel}</div>
+        <div class="profile-pills">
+          <span class="pill">${roleLabel(player.role)}</span>
+          ${player.league ? `<span class="pill">🏆 ${player.league.name}</span>` : ''}
+          ${player.clan ? `<span class="pill">${player.clan.name} · Nível ${player.clan.clanLevel}</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-tile"><div class="stat-value">🏆 ${player.trophies.toLocaleString('pt-BR')}</div><div class="stat-label">Troféus</div></div>
+      <div class="stat-tile"><div class="stat-value">🥇 ${player.bestTrophies.toLocaleString('pt-BR')}</div><div class="stat-label">Recorde de troféus</div></div>
+      <div class="stat-tile"><div class="stat-value">⭐ ${player.warStars.toLocaleString('pt-BR')}</div><div class="stat-label">Estrelas de guerra</div></div>
+      <div class="stat-tile"><div class="stat-value">⚔️ ${player.attackWins.toLocaleString('pt-BR')}</div><div class="stat-label">Vitórias no ataque</div></div>
+      <div class="stat-tile"><div class="stat-value">🛡️ ${player.defenseWins.toLocaleString('pt-BR')}</div><div class="stat-label">Vitórias na defesa</div></div>
+      <div class="stat-tile"><div class="stat-value">🎁 ${player.donations.toLocaleString('pt-BR')}</div><div class="stat-label">Doou</div></div>
+      <div class="stat-tile"><div class="stat-value">📦 ${player.donationsReceived.toLocaleString('pt-BR')}</div><div class="stat-label">Recebeu</div></div>
+      <div class="stat-tile"><div class="stat-value">🏛️ ${player.clanCapitalContributions.toLocaleString('pt-BR')}</div><div class="stat-label">Contribuição na capital</div></div>
+    </div>
+
+    ${
+      player.heroes.length
+        ? `<div class="panel">
+            <h2 class="panel-title">🦸 Heróis</h2>
+            <div class="hero-list">${player.heroes.map(heroBar).join('')}</div>
+          </div>`
+        : ''
+    }
+  `;
+
+  wirePlayerBackButton();
 }

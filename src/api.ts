@@ -1,4 +1,4 @@
-import type { ClanInfo, CurrentWar } from './types';
+import type { ClanInfo, CurrentWar, Player } from './types';
 
 export class ClanApiError extends Error {
   status?: number;
@@ -51,4 +51,23 @@ export async function fetchCurrentWar(tag: string): Promise<CurrentWar> {
   }
 
   return res.json() as Promise<CurrentWar>;
+}
+
+export async function fetchPlayer(tag: string): Promise<Player> {
+  const res = await fetch(`/api/coc/players/${encodeURIComponent(normalizeTag(tag))}`);
+
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new ClanApiError(
+        'Acesso negado pela API (403). O token só aceita requisições vindas do IP cadastrado em developer.clashofclans.com.',
+        403
+      );
+    }
+    if (res.status === 404) {
+      throw new ClanApiError('Jogador não encontrado. Confira a tag.', 404);
+    }
+    throw new ClanApiError(`Falha ao buscar jogador (HTTP ${res.status}).`, res.status);
+  }
+
+  return res.json() as Promise<Player>;
 }

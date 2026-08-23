@@ -20,6 +20,9 @@ dist-ssr
 # Raw/staging asset dump (duplicates public/league-icons, not used by the app)
 supercell-league-icons
 
+# Source logo dropped at repo root (already copied into public/coc-logo.png)
+/Clash of Clans logo.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

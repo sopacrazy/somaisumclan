@@ -1,13 +1,24 @@
 import './style.css';
 import { CLAN_TAG } from './data';
-import { renderClan, renderClanLoading, renderClanError, renderWar, renderWarLoading, renderWarError } from './render';
-import { fetchClan, fetchCurrentWar, ClanApiError } from './api';
+import {
+  renderClan,
+  renderClanLoading,
+  renderClanError,
+  renderWar,
+  renderWarLoading,
+  renderWarError,
+  renderPlayer,
+  renderPlayerLoading,
+  renderPlayerError,
+} from './render';
+import { fetchClan, fetchCurrentWar, fetchPlayer, ClanApiError } from './api';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
 app.innerHTML = `
   <header class="topnav">
     <div class="topnav-inner">
+      <img class="topnav-logo" src="${import.meta.env.BASE_URL}coc-logo.png" alt="Clash of Clans">
       <div class="brand">S.M.U.C</div>
       <span class="brand-sub">Só Mais Um Clã</span>
     </div>
@@ -28,6 +39,7 @@ app.innerHTML = `
     </nav>
     <div id="clanRoot" class="tab-panel"></div>
     <div id="warRoot" class="tab-panel" hidden></div>
+    <div id="playerRoot" class="tab-panel" hidden></div>
   </main>
 
   <footer class="site-footer">
@@ -69,33 +81,88 @@ async function loadWar(): Promise<void> {
   }
 }
 
-function setupTabs(): void {
+type Tab = 'overview' | 'war';
+
+let lastTab: Tab = 'overview';
+const PLAYER_HASH_PREFIX = '#/player/';
+
+function showTab(tab: Tab): void {
   const tabBar = document.getElementById('tabBar');
-  const panels: Record<string, HTMLElement | null> = {
+  const panels: Record<Tab, HTMLElement | null> = {
     overview: document.getElementById('clanRoot'),
     war: document.getElementById('warRoot'),
   };
+  const playerRoot = document.getElementById('playerRoot');
 
+  if (tabBar) tabBar.hidden = false;
+  if (playerRoot) playerRoot.hidden = true;
+
+  tabBar?.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach((btn) => {
+    const active = btn.dataset.tab === tab;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', String(active));
+  });
+
+  (Object.entries(panels) as [Tab, HTMLElement | null][]).forEach(([key, panel]) => {
+    if (panel) panel.hidden = key !== tab;
+  });
+
+  if (tab === 'war' && !warLoaded) {
+    loadWar();
+  }
+}
+
+function goToTab(tab: Tab): void {
+  lastTab = tab;
+  if (window.location.hash) {
+    window.location.hash = ''; // dispara hashchange -> handleRoute -> showTab(lastTab)
+  } else {
+    showTab(tab);
+  }
+}
+
+async function showPlayer(tag: string): Promise<void> {
+  const tabBar = document.getElementById('tabBar');
+  const clanRoot = document.getElementById('clanRoot');
+  const warRoot = document.getElementById('warRoot');
+  const playerRoot = document.getElementById('playerRoot');
+
+  if (tabBar) tabBar.hidden = true;
+  if (clanRoot) clanRoot.hidden = true;
+  if (warRoot) warRoot.hidden = true;
+  if (playerRoot) playerRoot.hidden = false;
+
+  renderPlayerLoading();
+  try {
+    const player = await fetchPlayer(tag);
+    renderPlayer(player);
+  } catch (err) {
+    const message =
+      err instanceof ClanApiError ? err.message : 'Não foi possível carregar o jogador.';
+    renderPlayerError(message);
+    document.getElementById('playerRetryBtn')?.addEventListener('click', () => showPlayer(tag));
+  }
+}
+
+function handleRoute(): void {
+  const hash = window.location.hash;
+  if (hash.startsWith(PLAYER_HASH_PREFIX)) {
+    showPlayer(decodeURIComponent(hash.slice(PLAYER_HASH_PREFIX.length)));
+  } else {
+    showTab(lastTab);
+  }
+}
+
+function setupTabs(): void {
+  const tabBar = document.getElementById('tabBar');
   tabBar?.addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');
     if (!button) return;
-    const tab = button.dataset.tab!;
-
-    tabBar.querySelectorAll<HTMLButtonElement>('.tab-btn').forEach((btn) => {
-      const active = btn === button;
-      btn.classList.toggle('active', active);
-      btn.setAttribute('aria-selected', String(active));
-    });
-
-    Object.entries(panels).forEach(([key, panel]) => {
-      if (panel) panel.hidden = key !== tab;
-    });
-
-    if (tab === 'war' && !warLoaded) {
-      loadWar();
-    }
+    goToTab(button.dataset.tab as Tab);
   });
 }
 
 setupTabs();
+window.addEventListener('hashchange', handleRoute);
+handleRoute();
 loadClan();
